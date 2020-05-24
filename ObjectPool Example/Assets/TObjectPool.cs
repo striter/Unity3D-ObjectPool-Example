@@ -158,16 +158,16 @@ public class ObjectPoolListBase<T, Y>
         m_PoolItem = poolTrans.Find(itemName).gameObject;
         m_PoolItem.gameObject.SetActive(false);
     }
-    public Y GetOrAddItem(T identity)
+    public Y GetOrSpawnItem(T identity)
     {
         if (ContainsItem(identity))
-            return GetItem(identity);
-        return AddItem(identity);
+            return Contains(identity);
+        return Spawn(identity);
     }
     public bool ContainsItem(T identity) => m_ActiveItemDic.ContainsKey(identity);
-    public Y GetItem(T identity) => m_ActiveItemDic[identity];
+    public Y Contains(T identity) => m_ActiveItemDic[identity];
 
-    public virtual Y AddItem(T identity)
+    public virtual Y Spawn(T identity)
     {
         Y targetItem;
         if (m_InactiveItemList.Count > 0)
@@ -177,21 +177,21 @@ public class ObjectPoolListBase<T, Y>
         }
         else
         {
-            targetItem = CreateNewItem(UnityEngine.Object.Instantiate(m_PoolItem, transform).transform);
+            targetItem = CreateInstance(UnityEngine.Object.Instantiate(m_PoolItem, transform).transform);
         }
         if (m_ActiveItemDic.ContainsKey(identity)) Debug.LogError(identity + "Already Exists In Grid Dic");
         else m_ActiveItemDic.Add(identity, targetItem);
-        Transform trans = GetItemTransform(targetItem);
+        Transform trans = GetInstanceTransform(targetItem);
         trans.name = identity.ToString();
         trans.gameObject.SetActive(true);
         return targetItem;
     }
 
-    public virtual void RemoveItem(T identity)
+    public virtual void Recycle(T identity)
     {
         Y item = m_ActiveItemDic[identity];
         m_InactiveItemList.Add(item);
-        GetItemTransform(item).gameObject.SetActive(false);
+        GetInstanceTransform(item).gameObject.SetActive(false);
         m_ActiveItemDic.Remove(identity);
     }
 
@@ -202,7 +202,7 @@ public class ObjectPoolListBase<T, Y>
         m_ActiveItemDic.Clear();
         foreach(var pair in list)
         {
-            GetItemTransform(pair.Value).SetAsLastSibling();
+            GetInstanceTransform(pair.Value).SetAsLastSibling();
             m_ActiveItemDic.Add(pair.Key, pair.Value);
         }
     }
@@ -212,16 +212,16 @@ public class ObjectPoolListBase<T, Y>
         Dictionary<T, Y> itemDic = new Dictionary<T, Y>(m_ActiveItemDic);
         foreach(var key in itemDic.Keys)
         {
-            RemoveItem(key);
+            Recycle(key);
         }
     } 
 
-    protected virtual Y CreateNewItem(Transform instantiateTrans)
+    protected virtual Y CreateInstance(Transform instantiateTrans)
     {
         Debug.LogError("Override This Please");
         return default(Y);
     }
-    protected virtual Transform GetItemTransform(Y targetItem)
+    protected virtual Transform GetInstanceTransform(Y targetItem)
     {
         Debug.LogError("Override This Please");
         return null;
@@ -233,8 +233,8 @@ public class ObjectPoolListComponent<T, Y> : ObjectPoolListBase<T, Y> where Y : 
     public ObjectPoolListComponent(Transform poolTrans, string itemName) : base(poolTrans, itemName)
     {
     }
-    protected override Y CreateNewItem(Transform instantiateTrans)=>instantiateTrans.GetComponent<Y>();
-    protected override Transform GetItemTransform(Y targetItem) => targetItem.transform;
+    protected override Y CreateInstance(Transform instantiateTrans)=>instantiateTrans.GetComponent<Y>();
+    protected override Transform GetInstanceTransform(Y targetItem) => targetItem.transform;
 }
 #endregion
 #region Class
@@ -249,17 +249,17 @@ public interface IObjectPoolItemBase<T>
 public class ObjectPoolListItem<T,Y>:ObjectPoolListBase<T,Y> where Y:IObjectPoolItemBase<T>
 {
     public ObjectPoolListItem(Transform poolTrans, string itemName) : base(poolTrans, itemName) { }
-    public override Y AddItem(T identity)
+    public override Y Spawn(T identity)
     {
-        Y item = base.AddItem(identity);
+        Y item = base.Spawn(identity);
         item.OnAddItem(identity);
         return item;
     }
 
-    public override void RemoveItem(T identity)
+    public override void Recycle(T identity)
     {
-        GetItem(identity).OnRemoveItem();
-        base.RemoveItem(identity);
+        Contains(identity).OnRemoveItem();
+        base.Recycle(identity);
     }
 }
 
@@ -296,13 +296,13 @@ public class ObjectPoolListClass<T, Y> : ObjectPoolListItem<T, Y> where Y : CObj
     public ObjectPoolListClass(Transform poolTrans, string itemName) : base(poolTrans, itemName) { }
 
     static readonly Type type = typeof(Y);
-    protected override Y CreateNewItem(Transform instantiateTrans)
+    protected override Y CreateInstance(Transform instantiateTrans)
     {
         Y item = Activator.CreateInstance(type, instantiateTrans) as Y;
         item.OnInitItem();
         return item;
     } 
-    protected override Transform GetItemTransform(Y targetItem) => targetItem.transform;
+    protected override Transform GetInstanceTransform(Y targetItem) => targetItem.transform;
 
 }
 #endregion
@@ -330,13 +330,13 @@ public class ObjectPoolListMonobehaviour<T, Y> : ObjectPoolListItem<T, Y> where 
     public ObjectPoolListMonobehaviour(Transform poolTrans, string itemName) : base(poolTrans, itemName)
     {
     }
-    protected override Y CreateNewItem(Transform instantiateTrans)
+    protected override Y CreateInstance(Transform instantiateTrans)
     {
         Y item = instantiateTrans.GetComponent<Y>();
         item.OnInitItem();
         return item;
     }
-    protected override Transform GetItemTransform(Y targetItem) => targetItem.transform;
+    protected override Transform GetInstanceTransform(Y targetItem) => targetItem.transform;
 }
 #endregion
 #endregion

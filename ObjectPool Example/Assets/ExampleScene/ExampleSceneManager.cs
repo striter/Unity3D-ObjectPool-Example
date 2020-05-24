@@ -36,9 +36,9 @@ public class ExampleSceneManager : MonoBehaviour {
         if(Input.GetKeyDown(KeyCode.Mouse0))
         {
             int shotIdentity = m_ShotCount++;
-            ShotsBase shot = m_ShotsPool.AddItem(shotIdentity);
+            ShotsBase shot = m_ShotsPool.Spawn(shotIdentity);
             shot.transform.position = Camera.main.transform.position+Vector3.down;
-            shot.Play(shotIdentity,Camera.main.ScreenPointToRay(Input.mousePosition).direction*3000f,m_ShotsPool.RemoveItem);
+            shot.Play(shotIdentity,Camera.main.ScreenPointToRay(Input.mousePosition).direction*3000f,m_ShotsPool.Recycle);
         }
 
         m_DropCheck -= Time.deltaTime;
