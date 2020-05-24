@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -14,6 +15,11 @@ public class ExampleSceneManager : MonoBehaviour {
     ObjectPoolListMonobehaviour<int, ShotsBase> m_ShotsPool;
     int m_ShotCount = 0;
     float m_DropCheck;
+    float m_ShotCheck;
+    [Range(.1f,2f)]
+    public float m_DropDuration=.2f;
+    [Range(.1f,2f)]
+    public float m_ShotDuration=.3f;
     void Awake()
     {
         ObjectPoolManager.Init();
@@ -32,27 +38,31 @@ public class ExampleSceneManager : MonoBehaviour {
             m_ShotsPool.Clear();
             ObjectPoolManager<enum_Drops, DropsBase>.RecycleAll();
         }
-
-        if(Input.GetKeyDown(KeyCode.Mouse0))
+        m_ShotCheck -= Time.deltaTime;
+        if (Input.GetKey(KeyCode.Mouse0))
         {
-            int shotIdentity = m_ShotCount++;
-            ShotsBase shot = m_ShotsPool.Spawn(shotIdentity);
-            shot.transform.position = Camera.main.transform.position+Vector3.down;
-            shot.Play(shotIdentity,Camera.main.ScreenPointToRay(Input.mousePosition).direction*3000f,m_ShotsPool.Recycle);
+            if(m_ShotCheck < 0)
+            {
+                int shotIdentity = m_ShotCount++;
+                ShotsBase shot = m_ShotsPool.Spawn(shotIdentity);
+                shot.transform.position = Camera.main.transform.position + Vector3.down;
+                shot.Play(shotIdentity, Camera.main.ScreenPointToRay(Input.mousePosition).direction * 3000f, m_ShotsPool.Recycle);
+                m_ShotCheck = m_ShotDuration;
+            }
         }
 
         m_DropCheck -= Time.deltaTime;
         if(m_DropCheck<0)
         {
             DropsBase drop=null;
-            switch(Random.Range(0,3))
+            switch(UnityEngine. Random.Range(0,3))
             {
                 case 0: drop=ObjectPoolManager<enum_Drops, DropsBase>.Spawn(enum_Drops.Cube, m_DropsParent, m_DropsParent.position, m_DropsParent.rotation); break;
                 case 1: drop=ObjectPoolManager<enum_Drops, DropsBase>.Spawn(enum_Drops.Spehre, m_DropsParent, m_DropsParent.position, m_DropsParent.rotation); break;
                 case 2: drop= ObjectPoolManager<enum_Drops, DropsBase>.Spawn(enum_Drops.Cyliner, m_DropsParent, m_DropsParent.position, m_DropsParent.rotation); break;
             }
-            drop.transform.position = drop.transform.position + Vector3.right * Random.Range(-5f, 5f);
-            m_DropCheck = .2f;
+            drop.transform.position = drop.transform.position + Vector3.right * UnityEngine.Random.Range(-5f, 5f);
+            m_DropCheck = m_DropDuration;
         }
 
     }
